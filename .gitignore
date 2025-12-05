@@ -1,0 +1,7 @@
+__pycache__
+*.session
+*.log
+# *.txt
+.env
+keywords.txt
+chats.txt

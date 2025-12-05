@@ -1,0 +1,5 @@
+Pyrogram==2.0.106
+tgcrypto
+aiosqlite
+python-dotenv
+requests

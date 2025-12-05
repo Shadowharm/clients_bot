@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  watcher:
+    build: .
+    volumes:
+      - ./data:/app/data
+    environment:
+      - API_ID=${API_ID}
+      - API_HASH=${API_HASH}
+      - SESSION_STRING=${SESSION_STRING}
+      - BOT_TOKEN=${BOT_TOKEN}
+      - ALLOWED_USER_ID=${ALLOWED_USER_ID}
+      - DB_PATH=/app/data/watch.db
+    restart: unless-stopped
