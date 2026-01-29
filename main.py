@@ -3,8 +3,6 @@
 import asyncio
 import sys
 import io
-from os import getenv
-from dotenv import load_dotenv
 
 # Настройка кодировки UTF-8 и отключение буферизации для Windows консоли
 if sys.platform == 'win32':
@@ -23,50 +21,37 @@ if sys.version_info >= (3, 14):
 
 from pyrogram import idle
 
-load_dotenv()
-
+from app import config
 from app.bot_admin import BotAdmin
 from app.watcher import Watcher
 from app.chats_updater import get_chats_in_folder
 
-def _get_env_int(name: str):
-    v = getenv(name)
-    try:
-        return int(v) if v is not None else None
-    except Exception:
-        return None
-
-API_ID = _get_env_int("API_ID") or 0
-API_HASH = getenv("API_HASH") or ""
-if API_HASH.startswith('"') and API_HASH.endswith('"'):
-    API_HASH = API_HASH[1:-1]
-
-BOT_TOKEN = getenv("BOT_TOKEN") or ""
-SESSION_STRING = getenv("SESSION_STRING")
-ALLOWED_USER_ID = _get_env_int("ALLOWED_USER_ID")
-NOTIFY_CHAT_ID = _get_env_int("NOTIFY_CHAT_ID") or ALLOWED_USER_ID or _get_env_int("USER_ID")
-
-CHATS_FILENAME = getenv("CHATS_FILENAME") or "chats.txt"
-
 async def main():
+    if not config.API_ID or not config.API_HASH:
+        raise SystemExit("❌ API_ID или API_HASH не заданы в .env")
+    if not config.BOT_TOKEN:
+        raise SystemExit("❌ BOT_TOKEN не задан в .env")
+    if config.NOTIFY_CHAT_ID is None:
+        print("⚠️ NOTIFY_CHAT_ID не задан — бот не сможет отправлять уведомления")
 
     try:
         print("🔄 Получение списка чатов ...")
         chat_ids = await get_chats_in_folder()
-        with open(CHATS_FILENAME, "w", encoding="utf-8") as f:
+        print(chat_ids)
+        with open(config.CHATS_FILE, "w", encoding="utf-8") as f:
             for cid in chat_ids:
                 f.write(f"{cid}\n")
-        print(f"✅ Записано {len(chat_ids)} чатов в {CHATS_FILENAME}")
+        print(f"✅ Записано {len(chat_ids)} чатов в {config.CHATS_FILE}")
     except Exception as e:
         print(f"❌ Ошибка при получении чатов: {e}")
 
     # создаём экземпляры
-    bot_admin = BotAdmin(api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN, admin_id=ALLOWED_USER_ID)
-    watcher = Watcher(api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING, bot_token=BOT_TOKEN)
+    bot_admin = BotAdmin(api_id=config.API_ID, api_hash=config.API_HASH, bot_token=config.BOT_TOKEN, admin_id=config.ADMIN_ID)
+    watcher = Watcher(api_id=config.API_ID, api_hash=config.API_HASH)
 
     # старт обоих клиентов
     await bot_admin.start()
-    await watcher.start(notify_chat_id=NOTIFY_CHAT_ID)
+    await watcher.start(notify_chat_id=config.NOTIFY_CHAT_ID)
 
     print("Все клиенты запущены. Ожидание событий... (Ctrl+C для остановки)")
 

@@ -36,24 +36,33 @@
 - API_ID — числовой идентификатор Telegram API
 - API_HASH — строковой API hash
 - BOT_TOKEN — токен вашего бота
-- SESSION_STRING — (опционально) строка сессии пользовательского аккаунта, если используется
+- WATCHER_SESSION_STRING — строка сессии пользовательского аккаунта (аккаунт, который состоит в чатах)
+- SESSION_STRING — (устаревшая, всё ещё поддерживается) строка сессии пользовательского аккаунта
 - ALLOWED_USER_ID — id администратора (используется в BotAdmin)
+- NOTIFY_CHAT_ID — id аккаунта/чата, куда бот отправляет уведомления (может быть другим аккаунтом)
 
 Необязательные:
 - FOLDER_NAME — название папки/фильтра в Telegram, откуда брать чаты (по умолчанию "test work")
-- UPDATE_INTERVAL — интервал в секундах для обновления (если активируется)  
-- CHATS_FILENAME — имя файла для записи id чатов (по умолчанию chats.txt)
-- PYROGRAM_SESSION_NAME — имя сессии pyrogram для временного клиента (по умолчанию my_account)
+ - UPDATE_INTERVAL — интервал в секундах для обновления (если активируется)  
+ - CHATS_FILE — имя файла для записи id чатов (по умолчанию chats.txt)
+ - WATCHER_SESSION_NAME — имя сессии pyrogram для пользовательского клиента (по умолчанию watcher_user)
+- KEYWORD_MATCH_MODE — режим поиска: substr (по умолчанию) или word
 
 Пример .env (example.env):
 ```
 API_ID=1234567
 API_HASH=your_api_hash_here
-SESSION_STRING=your_user_session_string_here
+WATCHER_SESSION_STRING=your_user_session_string_here
 BOT_TOKEN=123456:ABC-DEF...
 ALLOWED_USER_ID=987654321
+NOTIFY_CHAT_ID=123456789
 FOLDER_NAME=test work
+KEYWORD_MATCH_MODE=substr
 ```
+
+Важно:
+- Аккаунт, который получает уведомления, должен один раз написать боту (иначе бот не сможет отправлять ему сообщения).
+- WATCHER_SESSION_STRING и NOTIFY_CHAT_ID могут относиться к разным аккаунтам — это поддерживается.
 
 ---
 

@@ -1,11 +1,9 @@
-from os import getenv
-from dotenv import load_dotenv
 from pyrogram import Client, filters
 import asyncio
 import re
 from typing import List, Optional
 
-load_dotenv()
+from app import config
 
 class BotAdmin:
 
@@ -14,9 +12,9 @@ class BotAdmin:
         api_id: int,
         api_hash: str,
         bot_token: str,
-        kw_file: str = "keywords.txt",
-        admin_id: Optional[int] = None,
-        session_name: str = "bot_admin"
+        kw_file: str = str(config.KW_FILE),
+        admin_id: Optional[int] = config.ADMIN_ID,
+        session_name: str = config.BOT_SESSION_NAME
     ):
         self.api_id = api_id
         self.api_hash = api_hash

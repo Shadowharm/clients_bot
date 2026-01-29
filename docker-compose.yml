@@ -7,8 +7,11 @@ services:
     environment:
       - API_ID=${API_ID}
       - API_HASH=${API_HASH}
+      - WATCHER_SESSION_STRING=${WATCHER_SESSION_STRING}
       - SESSION_STRING=${SESSION_STRING}
       - BOT_TOKEN=${BOT_TOKEN}
       - ALLOWED_USER_ID=${ALLOWED_USER_ID}
+      - NOTIFY_CHAT_ID=${NOTIFY_CHAT_ID}
+      - KEYWORD_MATCH_MODE=${KEYWORD_MATCH_MODE}
       - DB_PATH=/app/data/watch.db
     restart: unless-stopped

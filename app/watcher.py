@@ -1,12 +1,12 @@
 import re
 import requests
-from os import getenv
-from dotenv import load_dotenv
-from pyrogram import Client, filters
 from datetime import datetime
 from typing import List, Optional
 
-load_dotenv()
+from pyrogram import Client, filters
+import asyncio
+
+from app import config
 
 class Watcher:
     """
@@ -17,11 +17,13 @@ class Watcher:
         self,
         api_id: int,
         api_hash: str,
-        session_string: Optional[str] = None,
-        bot_token: Optional[str] = None,
-        chats_file: str = "chats.txt",
-        kw_file: str = "keywords.txt",
-        session_name: str = "watcher_user"
+        session_string: Optional[str] = config.WATCHER_SESSION_STRING or None,
+        bot_token: Optional[str] = config.BOT_TOKEN or None,
+        chats_file: str = str(config.CHATS_FILE),
+        kw_file: str = str(config.KW_FILE),
+        session_name: str = config.WATCHER_SESSION_NAME,
+        keyword_mode: str = config.KEYWORD_MATCH_MODE,
+        max_notify_length: int = config.MAX_NOTIFY_LENGTH,
     ):
         self.api_id = api_id
         self.api_hash = api_hash
@@ -30,9 +32,16 @@ class Watcher:
         self.CHATS_FILE = chats_file
         self.KW_FILE = kw_file
 
-        self.client = Client(session_name, api_id=self.api_id, api_hash=self.api_hash, session_string=self.session_string)
+        self.client = Client(
+            session_name,
+            api_id=self.api_id,
+            api_hash=self.api_hash,
+            session_string=self.session_string,
+        )
 
         self.WATCH_CHAT_IDS = self._load_chats()
+        self.KEYWORD_MODE = keyword_mode
+        self.MAX_NOTIFY_LENGTH = max_notify_length
         print(f"Загружено {len(self.WATCH_CHAT_IDS)} chat_id из {self.CHATS_FILE}")
 
         @self.client.on_message(filters.all)
@@ -51,11 +60,7 @@ class Watcher:
             keywords = self.load_keywords_from_file(self.KW_FILE)
             if not keywords:
                 return
-
-            escaped = [re.escape(k) for k in keywords if k]
-            local_pattern = re.compile(r"\b(?:" + "|".join(escaped) + r")\b", flags=re.IGNORECASE)
-
-            if not local_pattern.search(text):
+            if not self.match_keywords(text, keywords):
                 return
             ts = datetime.fromtimestamp(message.date.timestamp()).strftime("%Y-%m-%d %H:%M:%S")
             chat_title = message.chat.title or getattr(message.chat, "first_name", None) or str(chat_id)
@@ -80,14 +85,13 @@ class Watcher:
                 debug_info += f" | username: @{chat_username}"
             
             lines = []
-            lines.append("------------------------------------------------------------")
-            lines.append(f"[{ts}] Ключевое слово найдено в чате: {chat_title}")
+            lines.append(f"Ключевое слово найдено в чате: {chat_title}")
             lines.append(f"Отправитель: {sender}")
             lines.append(f"Ссылка: {link}")
             lines.append(f"Текст: {preview}")
-            lines.append(f"message_id: {message.id} | chat_id: {chat_id} | {debug_info}")
-            lines.append("------------------------------------------------------------\n")
             message_text = "\n".join(lines)
+            if len(message_text) > self.MAX_NOTIFY_LENGTH:
+                message_text = message_text[: self.MAX_NOTIFY_LENGTH - 1] + "…"
 
             print(message_text)
             if not self.BOT_TOKEN:
@@ -106,7 +110,7 @@ class Watcher:
                 "disable_notification": True,
             }
             try:
-                resp = requests.post(url, json=payload, timeout=10)
+                resp = await asyncio.to_thread(requests.post, url, json=payload, timeout=10)
                 if resp.status_code == 200:
                     print(f"Уведомление отправлено в {notify_chat_id} (status 200).")
                 else:
@@ -196,6 +200,33 @@ class Watcher:
         if getattr(message, "caption", None):
             parts.append(message.caption)
         return "\n".join(parts).strip()
+
+    @staticmethod
+    def _normalize(text: str) -> str:
+        return text.casefold()
+
+    def match_keywords(self, text: str, keywords: List[str]) -> bool:
+        if not text:
+            return False
+        mode = (self.KEYWORD_MODE or "substr").lower()
+        if mode not in {"substr", "word"}:
+            mode = "substr"
+
+        if mode == "substr":
+            haystack = self._normalize(text)
+            for kw in keywords:
+                k = kw.strip()
+                if not k:
+                    continue
+                if self._normalize(k) in haystack:
+                    return True
+            return False
+
+        escaped = [re.escape(k) for k in keywords if k and k.strip()]
+        if not escaped:
+            return False
+        local_pattern = re.compile(r"\b(?:" + "|".join(escaped) + r")\b", flags=re.IGNORECASE)
+        return bool(local_pattern.search(text))
 
     async def start(self, notify_chat_id: Optional[int] = None) -> None:
         self.NOTIFY_CHAT_ID = notify_chat_id
